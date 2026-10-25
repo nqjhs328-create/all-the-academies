@@ -1,0 +1,836 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All the Academies</title>
+
+  <!-- MapLibre GL JS 지도 스타일 -->
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #667085;
+      --line: #e5e9ef;
+      --surface: #ffffff;
+      --accent: #246bfd;
+      --accent-soft: #edf3ff;
+      --shadow: 0 8px 28px rgba(20, 35, 55, .13);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   "Noto Sans KR", sans-serif;
+      color: var(--ink);
+      overflow: hidden;
+      background: #f4f6f8;
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: #eaf0e8;
+    }
+
+    .search-panel {
+      position: fixed;
+      z-index: 1000;
+      top: 18px;
+      left: 18px;
+      width: min(360px, calc(100vw - 36px));
+      padding: 14px;
+      border: 1px solid rgba(229, 233, 239, .95);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .97);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 11px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 29px;
+      height: 29px;
+      border-radius: 9px;
+      color: white;
+      background: var(--accent);
+      font-size: 15px;
+    }
+
+    .area-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-row input {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      background: #f8fafc;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .search-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(36, 107, 253, .12);
+      background: white;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .search-button {
+      flex: 0 0 auto;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      color: white;
+      background: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .filters {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .filters::-webkit-scrollbar { display: none; }
+
+    .filter {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #475467;
+      background: white;
+      font-size: 12px;
+    }
+
+    .filter.active {
+      border-color: #c9d8ff;
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 750;
+    }
+
+    .map-note {
+      position: fixed;
+      z-index: 500;
+      right: 14px;
+      bottom: 14px;
+      max-width: min(350px, calc(100vw - 28px));
+      padding: 9px 12px;
+      border: 1px solid rgba(229, 233, 239, .9);
+      border-radius: 10px;
+      color: #475467;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 3px 14px rgba(20,35,55,.08);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .map-note a { color: var(--accent); }
+
+    .place-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 12px;
+      height: 12px;
+      padding: 0;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      background: #2878ff;
+      box-shadow: 0 1px 5px rgba(0,0,0,.35);
+      cursor: pointer;
+      font-size: 0;
+      border: 1px solid rgba(20,35,55,.08);
+      border-radius: 11px;
+      background: white;
+      box-shadow: 0 3px 12px rgba(20,35,55,.17);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .place-pin .pin-star {
+      color: #e5a000;
+      font-size: 12px;
+    }
+
+    .place-pin .pin-score {
+      color: #667085;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .maplibregl-popup-content {
+      border-radius: 14px;
+    }
+
+    .maplibregl-popup-content {
+      margin: 13px 15px;
+      min-width: 175px;
+    }
+
+    .popup-category {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .popup-name {
+      margin: 4px 0 7px;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .popup-rating {
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .popup-rating span {
+      color: #e5a000;
+    }
+
+    .popup-meta {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .popup-action {
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px;
+      border: 0;
+      border-radius: 8px;
+      color: white;
+      background: var(--accent);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .empty-message {
+      display: none;
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      color: #667085;
+      background: #f8fafc;
+      font-size: 12px;
+    }
+
+    @media (max-width: 520px) {
+      .search-panel {
+        top: 10px;
+        left: 10px;
+        width: calc(100vw - 20px);
+        padding: 11px;
+      }
+
+      .brand-row { margin-bottom: 8px; }
+      .map-note { font-size: 10px; }
+    }
+  </style>
+
+<style id="academy-panel-position-fix">
+#academy-panel {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  left: auto !important;
+  width: 340px !important;
+  height: min(82vh, 760px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: calc(100vh - 32px) !important;
+  overflow: hidden !important;
+  z-index: 1000 !important;
+  box-sizing: border-box !important;
+}
+@media (max-width: 700px) {
+  #academy-panel {
+    height: auto !important;
+    top: auto !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: 45vh !important;
+  }
+}
+</style>
+
+</head>
+
+<body>
+
+<style>
+#academy-panel {
+  position: absolute; z-index: 5; top: 12px; left: 12px;
+  width: min(360px, calc(100vw - 24px)); max-height: 82vh;
+  display: flex; flex-direction: column; background: white;
+  border-radius: 14px; box-shadow: 0 3px 18px #0002;
+  font: 14px/1.5 Arial, sans-serif; color: #202b3c;
+}
+#academy-panel * { box-sizing: border-box; }
+#academy-panel header { padding: 16px 16px 8px; }
+#academy-panel h2 { margin: 0 0 4px; font-size: 20px; }
+#academy-panel .muted { color: #697586; font-size: 12px; }
+#academy-search { margin: 8px 16px; padding: 11px; border: 1px solid #ccd3dd;
+  border-radius: 8px; font-size: 15px; }
+#academy-results { overflow-y: auto; flex: 1 1 auto; min-height: 80px; }
+.academy-row { display: block; width: 100%; text-align: left; padding: 12px 16px;
+  border: 0; border-top: 1px solid #edf0f4; background: white; cursor: pointer; }
+.academy-row:hover, .academy-row:focus { background: #edf4ff; }
+.academy-row strong { display: block; font-size: 14px; }
+.academy-row small { display: block; margin-top: 3px; color: #697586; }
+#academy-detail { display: none; flex: 0 0 auto; min-height: 100px; padding: 14px 16px; border-top: 1px solid #dfe4eb;
+  overflow-y: auto; max-height: 36vh; }
+#academy-detail h3 { margin: 0 0 8px; font-size: 18px; }
+#academy-detail p { margin: 6px 0; overflow-wrap: anywhere; }
+#academy-close { float: right; border: 0; background: #edf0f4; border-radius: 6px;
+  padding: 5px 9px; cursor: pointer; }
+@media(max-width:600px) {
+  #academy-panel { top: 8px; left: 8px; width: min(330px, calc(100vw - 16px));
+    max-height: 76vh; }
+}
+</style>
+<section id="academy-panel" aria-label="Academy search">
+  <header>
+    <h2>&#127979; Jeonju Academies</h2>
+    <div class="muted" id="academy-count">Loading academy data...</div>
+  </header>
+  <input id="academy-search" type="search"
+    placeholder="Search name, area, subject..." aria-label="Search academies">
+  <div id="academy-results"></div>
+  <div id="academy-detail" aria-live="polite"></div>
+</section>
+
+  <div id="map" aria-label="서신동 장소 리뷰 지도"></div>
+
+  <section class="search-panel" aria-label="장소 검색">
+    <div class="brand-row">
+      <div class="brand">
+        <span class="brand-mark">동</span>
+        <span>All the Academies</span>
+      </div>
+      <span class="area-label">전주 서신동 베타</span>
+    </div>
+
+    <form class="search-row" id="searchForm">
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="장소 이름 검색"
+        aria-label="장소 이름 검색"
+        autocomplete="off"
+      >
+      <button class="search-button" type="submit">검색</button>
+    </form>
+
+    <div class="filters" aria-label="장소 종류 필터">
+      <button class="filter active" data-category="전체">전체</button>
+      <button class="filter" data-category="음식점">음식점</button>
+      <button class="filter" data-category="카페">카페</button>
+      <button class="filter" data-category="학원">학원</button>
+      <button class="filter" data-category="학교">학교</button>
+      <button class="filter" data-category="기타">기타</button>
+    </div>
+
+    <div id="emptyMessage" class="empty-message">
+      검색 결과가 없어. 다른 이름으로 검색해 봐.
+    </div>
+  </section>
+
+  <div class="map-note">
+    지도 데이터 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors.
+    장소와 별점은 화면 확인용 예시 데이터야.
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <script>
+    // MapLibre 지도: 로컬 벡터 타일 서버 사용
+    window.academyMap = null;
+    const map = new maplibregl.Map({
+      container: "map",
+      style: "https://falls-unavailable-stylish-economic.trycloudflare.com/styles/basic-preview/style.json",
+      center: [127.1178, 35.8318],
+      zoom: 15,
+      attributionControl: false
+    });
+
+    window.academyMap = map;
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+    map.addControl(new maplibregl.AttributionControl({
+      customAttribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+    }), "bottom-right");
+
+    // 샘플 장소 데이터입니다. 실제 상호명/좌표/별점이 아닙니다.
+    const places = [{"id":1,"name":"1001안경점","category":"기타","lat":35.8345358,"lng":127.1156679,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":2,"name":"D마트","category":"기타","lat":35.8250089,"lng":127.1148462,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":3,"name":"GS25","category":"기타","lat":35.8354232,"lng":127.1152437,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":4,"name":"GS25","category":"기타","lat":35.8356425,"lng":127.1105652,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":5,"name":"GS25","category":"기타","lat":35.8257399,"lng":127.114235,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":6,"name":"KB국민은행","category":"기타","lat":35.830602,"lng":127.1155235,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":7,"name":"LG 세탁소","category":"기타","lat":35.8366585,"lng":127.1123608,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":8,"name":"LG유플러스서일직영점","category":"기타","lat":35.8347811,"lng":127.1156737,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":9,"name":"MG새마을금고","category":"기타","lat":35.8351587,"lng":127.1160892,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":10,"name":"Olivea Lauren","category":"기타","lat":35.8323057,"lng":127.1150967,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":11,"name":"SC제일은행","category":"기타","lat":35.8341313,"lng":127.1197826,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":12,"name":"S헤어","category":"기타","lat":35.835727,"lng":127.1123913,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":13,"name":"T world","category":"기타","lat":35.8320861,"lng":127.1119814,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":14,"name":"강남치과의원","category":"기타","lat":35.8320459,"lng":127.1208203,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":15,"name":"강성호피부과의원","category":"기타","lat":35.8342499,"lng":127.1210935,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":16,"name":"개미카클리닉","category":"기타","lat":35.8360836,"lng":127.1239983,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":17,"name":"거북이한의원","category":"기타","lat":35.8306188,"lng":127.1138184,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":18,"name":"고사평서공원","category":"기타","lat":35.8361836,"lng":127.1085014,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":19,"name":"고은피부과","category":"기타","lat":35.8319447,"lng":127.1139152,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":20,"name":"공용주차장","category":"기타","lat":35.8353974,"lng":127.1116387,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":21,"name":"곽은희피부과의원","category":"기타","lat":35.8320347,"lng":127.1197637,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":22,"name":"곽희준한의원","category":"기타","lat":35.8320426,"lng":127.1135558,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":23,"name":"굿모닝비뇨기과","category":"기타","lat":35.8319926,"lng":127.1208219,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":24,"name":"김나현 Hair Salon","category":"기타","lat":35.8367049,"lng":127.1123584,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":25,"name":"김문영치과의원","category":"기타","lat":35.8319632,"lng":127.1195412,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":26,"name":"김미주헤어펌","category":"기타","lat":35.832047,"lng":127.1119827,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":27,"name":"김해진피아노","category":"기타","lat":35.8364308,"lng":127.1119558,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":28,"name":"노송한약국","category":"기타","lat":35.82986,"lng":127.116948,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":29,"name":"농협","category":"기타","lat":35.8350239,"lng":127.1160811,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":30,"name":"뉴욕치과","category":"기타","lat":35.8251448,"lng":127.1159302,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":31,"name":"다솜신경정신과의원","category":"기타","lat":35.8341235,"lng":127.1206461,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":32,"name":"다이소","category":"기타","lat":35.8256048,"lng":127.1230954,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":33,"name":"다이소","category":"기타","lat":35.8347646,"lng":127.1276694,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":34,"name":"대광제일주유소","category":"기타","lat":35.8304129,"lng":127.1158712,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":35,"name":"대림주유소","category":"기타","lat":35.837548,"lng":127.1204097,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":36,"name":"대우마트","category":"기타","lat":35.8374331,"lng":127.1154106,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":37,"name":"대우복마트","category":"기타","lat":35.8353575,"lng":127.1187948,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":38,"name":"더존치과의원","category":"기타","lat":35.834317,"lng":127.1155899,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":39,"name":"도내기샘공원","category":"기타","lat":35.8317457,"lng":127.1168345,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":40,"name":"동아세탁","category":"기타","lat":35.8358307,"lng":127.1123879,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":41,"name":"동해한의원","category":"기타","lat":35.8253266,"lng":127.1214402,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":42,"name":"드림연합의원","category":"기타","lat":35.8284117,"lng":127.1232597,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":43,"name":"드림치과","category":"기타","lat":35.8320252,"lng":127.1123381,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":44,"name":"떡보의하루 서신점","category":"기타","lat":35.8349403,"lng":127.1156777,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":45,"name":"롯데백화점","category":"기타","lat":35.8344785,"lng":127.1218486,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":46,"name":"롯데백화점 지하주차장","category":"기타","lat":35.8350008,"lng":127.121645,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":47,"name":"리브가 헤어샾","category":"기타","lat":35.8319687,"lng":127.1119747,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":48,"name":"메이크유성형외과의원","category":"기타","lat":35.8341679,"lng":127.1211619,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":49,"name":"명성마트","category":"기타","lat":35.838982,"lng":127.115784,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":50,"name":"목화이불마트","category":"기타","lat":35.8320178,"lng":127.1208217,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":51,"name":"문이비인후과의원","category":"기타","lat":35.8323471,"lng":127.11321,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":52,"name":"문학대공원","category":"기타","lat":35.8288755,"lng":127.1084695,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":53,"name":"뮤즈클리닉","category":"기타","lat":35.8341889,"lng":127.1204156,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":54,"name":"미담치과의원","category":"기타","lat":35.8320328,"lng":127.1199314,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":55,"name":"미래아동도서","category":"기타","lat":35.8366384,"lng":127.1119277,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":56,"name":"미소모아치과","category":"기타","lat":35.8341148,"lng":127.1204208,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":57,"name":"미즈웰김영희산부인과의원","category":"기타","lat":35.8341736,"lng":127.1201742,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":58,"name":"민속떡방앗간","category":"기타","lat":35.8319263,"lng":127.1119773,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":59,"name":"박달나무한의원","category":"기타","lat":35.834278,"lng":127.1201648,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":60,"name":"박영규내과","category":"기타","lat":35.8251792,"lng":127.1159281,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":61,"name":"박용현내과","category":"기타","lat":35.8349953,"lng":127.1156749,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":62,"name":"박천수정형외과","category":"기타","lat":35.8341921,"lng":127.1156158,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":63,"name":"박한의원","category":"기타","lat":35.832048,"lng":127.1121946,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":64,"name":"밝은산부인과의원","category":"기타","lat":35.8320306,"lng":127.1139097,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":65,"name":"배스트e치과","category":"기타","lat":35.8354218,"lng":127.1161321,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":66,"name":"백화점약국","category":"기타","lat":35.834334,"lng":127.1200548,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":67,"name":"베이크팡","category":"기타","lat":35.835411,"lng":127.1156384,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":68,"name":"보가치과의원","category":"기타","lat":35.8341345,"lng":127.1199194,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":69,"name":"복마트","category":"기타","lat":35.8359421,"lng":127.1119742,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":70,"name":"복마트","category":"기타","lat":35.8343777,"lng":127.1120092,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":71,"name":"복음연합내과의원","category":"기타","lat":35.832041,"lng":127.1188137,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":72,"name":"본병원","category":"기타","lat":35.8251579,"lng":127.115562,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":73,"name":"본치과","category":"기타","lat":35.8251583,"lng":127.1151512,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":74,"name":"사람사랑치과의원 전주","category":"기타","lat":35.8341062,"lng":127.1209674,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":75,"name":"삼성여성한의원","category":"기타","lat":35.830941,"lng":127.116076,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":76,"name":"생명한의원","category":"기타","lat":35.8348728,"lng":127.1160851,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":77,"name":"서문내과","category":"기타","lat":35.8341094,"lng":127.1201782,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":78,"name":"서부공원","category":"기타","lat":35.8342705,"lng":127.1128438,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":79,"name":"서신E재활의학과의원","category":"기타","lat":35.8320426,"lng":127.1193346,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":80,"name":"서신골프클럽","category":"기타","lat":35.8270453,"lng":127.1168541,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":81,"name":"서신공영주차장","category":"기타","lat":35.8315134,"lng":127.1149829,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":82,"name":"서신동 도서관","category":"기타","lat":35.831073,"lng":127.1150372,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":83,"name":"서신동 시장","category":"기타","lat":35.8305099,"lng":127.114492,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":84,"name":"서신동 우체국","category":"기타","lat":35.8308469,"lng":127.1149697,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":85,"name":"서신동 주민센터","category":"기타","lat":35.8310577,"lng":127.1154515,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":86,"name":"서신동물병원","category":"기타","lat":35.8282,"lng":127.11548,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":87,"name":"서신동성당","category":"기타","lat":35.8263704,"lng":127.1182164,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":88,"name":"서신스크린골프","category":"기타","lat":35.8353482,"lng":127.1120116,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":89,"name":"서신식물원","category":"기타","lat":35.830346,"lng":127.114452,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":90,"name":"서신종로약국","category":"기타","lat":35.8320339,"lng":127.1191348,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":91,"name":"서신한의원","category":"기타","lat":35.8320504,"lng":127.1123384,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":92,"name":"서여울길공원","category":"기타","lat":35.836153,"lng":127.1111157,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":93,"name":"서일마트","category":"기타","lat":35.8357254,"lng":127.1173193,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":94,"name":"서일성당","category":"기타","lat":35.8373685,"lng":127.1102196,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":95,"name":"서일성당","category":"기타","lat":35.8375366,"lng":127.1102936,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":96,"name":"선수촌공원","category":"기타","lat":35.8348374,"lng":127.1192598,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":97,"name":"선수촌마트","category":"기타","lat":35.834623,"lng":127.1164281,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":98,"name":"성원훼밀리마트","category":"기타","lat":35.8305027,"lng":127.1109296,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":99,"name":"세븐일레븐","category":"기타","lat":35.8354206,"lng":127.1120296,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":100,"name":"세븐일레븐","category":"기타","lat":35.8343346,"lng":127.1204256,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":101,"name":"세븐일레븐","category":"기타","lat":35.8367711,"lng":127.1085334,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":102,"name":"세븐일레븐","category":"기타","lat":35.8363672,"lng":127.1081894,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":103,"name":"세종헤어","category":"기타","lat":35.8349184,"lng":127.1160825,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":104,"name":"소리이비인후과","category":"기타","lat":35.8348359,"lng":127.1156764,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":105,"name":"소망산부인과의원","category":"기타","lat":35.835877,"lng":127.127564,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":106,"name":"수종합동물병원","category":"기타","lat":35.82871,"lng":127.12306,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":107,"name":"신세계병원","category":"기타","lat":35.8305121,"lng":127.1177611,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":108,"name":"신협","category":"기타","lat":35.8357492,"lng":127.1116738,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":109,"name":"아름다운김현숙안과의원","category":"기타","lat":35.8251704,"lng":127.1151878,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":110,"name":"아이앤유성형외과의원","category":"기타","lat":35.8341998,"lng":127.120828,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":111,"name":"에이스 골프연습장","category":"기타","lat":35.8362068,"lng":127.123043,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":112,"name":"여성시대헤어","category":"기타","lat":35.8353468,"lng":127.115683,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":113,"name":"연세비비의원","category":"기타","lat":35.834303,"lng":127.119741,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":114,"name":"연세안과","category":"기타","lat":35.8319976,"lng":127.1195415,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":115,"name":"예담한약국","category":"기타","lat":35.8352535,"lng":127.1120252,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":116,"name":"예스한우","category":"기타","lat":35.8354175,"lng":127.1155746,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":117,"name":"예인치과의원","category":"기타","lat":35.8319959,"lng":127.1202359,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":118,"name":"예일소아과의원","category":"기타","lat":35.8320024,"lng":127.119765,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":119,"name":"옛날시골찐빵","category":"기타","lat":35.8345759,"lng":127.1095647,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":120,"name":"오명록성형외과","category":"기타","lat":35.8319724,"lng":127.1197671,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":121,"name":"오토플러스","category":"기타","lat":35.8362535,"lng":127.1238854,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":122,"name":"왕국환한의원","category":"기타","lat":35.8323116,"lng":127.1154293,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":123,"name":"우리마트","category":"기타","lat":35.828701,"lng":127.113873,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":124,"name":"우리치과의원","category":"기타","lat":35.8318956,"lng":127.111978,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":125,"name":"우리항맥외과","category":"기타","lat":35.8251921,"lng":127.1139287,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":126,"name":"우주한의원","category":"기타","lat":35.8352163,"lng":127.1210754,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":127,"name":"운동장","category":"기타","lat":35.837172,"lng":127.1116073,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":128,"name":"운동장","category":"기타","lat":35.8360043,"lng":127.1151198,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":129,"name":"운동장","category":"기타","lat":35.8320778,"lng":127.1089417,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":130,"name":"운동장","category":"기타","lat":35.8316132,"lng":127.1101185,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":131,"name":"유디치과병원","category":"기타","lat":35.8313,"lng":127.12308,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":132,"name":"유사랑외과","category":"기타","lat":35.8319698,"lng":127.1213154,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":133,"name":"유앤유외과","category":"기타","lat":35.834111,"lng":127.1200562,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":134,"name":"이마트","category":"기타","lat":35.8325787,"lng":127.1203528,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":135,"name":"이마트24","category":"기타","lat":35.8317707,"lng":127.1141264,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":136,"name":"이마트야외 주차장","category":"기타","lat":35.8325939,"lng":127.1218989,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":137,"name":"이한샘신경과의원","category":"기타","lat":35.8320404,"lng":127.1200763,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":138,"name":"인터마트","category":"기타","lat":35.827248,"lng":127.117298,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":139,"name":"일","category":"기타","lat":35.83025,"lng":127.112483,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":140,"name":"자연이준생명한의원","category":"기타","lat":35.827813,"lng":127.121808,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":141,"name":"장명규내과의원","category":"기타","lat":35.8320308,"lng":127.1128112,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":142,"name":"장미약국","category":"기타","lat":35.8350926,"lng":127.1156817,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":143,"name":"재뜸공원","category":"기타","lat":35.8268056,"lng":127.1233556,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":144,"name":"전세계기념품타운","category":"기타","lat":35.835977,"lng":127.1230848,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":145,"name":"전주서신마트","category":"기타","lat":35.8305328,"lng":127.1177839,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":146,"name":"전주서울하정외과","category":"기타","lat":35.8353324,"lng":127.1213636,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":147,"name":"전주아름다운피부과","category":"기타","lat":35.8320339,"lng":127.1202359,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":148,"name":"전주완산경찰서 서신지구대","category":"기타","lat":35.8354036,"lng":127.1113848,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":149,"name":"전주이로운치과","category":"기타","lat":35.8323471,"lng":127.11336,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":150,"name":"전주조은인테리어","category":"기타","lat":35.8350153,"lng":127.1120712,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":151,"name":"전주평안교회","category":"기타","lat":35.8365896,"lng":127.111519,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":152,"name":"정덕영안과","category":"기타","lat":35.834121,"lng":127.1161302,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":153,"name":"정마트","category":"기타","lat":35.8288938,"lng":127.1257899,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":154,"name":"정몽룡치과의원","category":"기타","lat":35.8340931,"lng":127.1207912,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":155,"name":"정소아청소년과","category":"기타","lat":35.8352209,"lng":127.1156764,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":156,"name":"정준오치과","category":"기타","lat":35.8320333,"lng":127.1130163,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":157,"name":"중고가전마트","category":"기타","lat":35.838851,"lng":127.122505,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":158,"name":"진산부인과","category":"기타","lat":35.8316868,"lng":127.1223292,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":159,"name":"진산부인과불임유전연구소","category":"기타","lat":35.8317015,"lng":127.1223299,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":160,"name":"최강 정육점","category":"기타","lat":35.8323351,"lng":127.1137811,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":161,"name":"캥거루치과의원","category":"기타","lat":35.8286997,"lng":127.12306,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":162,"name":"커피니","category":"기타","lat":35.8357171,"lng":127.1119493,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":163,"name":"코리아골프마트","category":"기타","lat":35.833058,"lng":127.124141,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":164,"name":"탑이비인후과","category":"기타","lat":35.8342824,"lng":127.1200588,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":165,"name":"토마토종합약국","category":"기타","lat":35.8343351,"lng":127.1205309,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":166,"name":"파리바게뜨","category":"기타","lat":35.8353022,"lng":127.1160945,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":167,"name":"파리바게뜨","category":"기타","lat":35.8344031,"lng":127.1093528,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":168,"name":"프로미카월드","category":"기타","lat":35.8379458,"lng":127.1107371,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":169,"name":"피브로한의원전주점","category":"기타","lat":35.8341226,"lng":127.1205208,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":170,"name":"필톡스뷰티의원","category":"기타","lat":35.8341779,"lng":127.1200629,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":171,"name":"하늘마음 한의원","category":"기타","lat":35.8320263,"lng":127.1195385,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":172,"name":"한아름마트","category":"기타","lat":35.8360752,"lng":127.1095379,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":173,"name":"함소아한의원","category":"기타","lat":35.834111,"lng":127.1211075,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":174,"name":"해남세탁소","category":"기타","lat":35.8323079,"lng":127.1152,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":175,"name":"해독한의원","category":"기타","lat":35.8319951,"lng":127.1139124,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":176,"name":"허향순헤어클릭","category":"기타","lat":35.8323101,"lng":127.1153086,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":177,"name":"혜화당한의원","category":"기타","lat":35.8323386,"lng":127.1124847,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":178,"name":"화목한의원","category":"기타","lat":35.8323416,"lng":127.1134955,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":179,"name":"화신마트","category":"기타","lat":35.832305,"lng":127.1148946,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":180,"name":"황태편의점","category":"기타","lat":35.831554,"lng":127.119364,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":181,"name":"59쌀피자","category":"음식점","lat":35.8360785,"lng":127.1119585,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":182,"name":"bbq Olive Chichen","category":"음식점","lat":35.8367912,"lng":127.1123704,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":183,"name":"가로비","category":"음식점","lat":35.8351245,"lng":127.1211276,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":184,"name":"가맥아줌마","category":"음식점","lat":35.8351319,"lng":127.1120187,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":185,"name":"개마고원","category":"음식점","lat":35.8349782,"lng":127.1095499,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":186,"name":"고기잡이횟집","category":"음식점","lat":35.827307,"lng":127.115471,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":187,"name":"곰갈비","category":"음식점","lat":35.8344113,"lng":127.1113212,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":188,"name":"교촌치킨","category":"음식점","lat":35.8357469,"lng":127.1102634,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":189,"name":"국민운동","category":"음식점","lat":35.8353675,"lng":127.1104901,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":190,"name":"국수나무","category":"음식점","lat":35.8353858,"lng":127.115676,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":191,"name":"남노갈비","category":"음식점","lat":35.8363041,"lng":127.1119416,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":192,"name":"노가리앤비어","category":"음식점","lat":35.8356944,"lng":127.111666,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":193,"name":"뉴욕야시장","category":"음식점","lat":35.8359729,"lng":127.1105562,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":194,"name":"다사랑치킨피자","category":"음식점","lat":35.8361651,"lng":127.1119055,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":195,"name":"대구통닭","category":"음식점","lat":35.8348838,"lng":127.1120529,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":196,"name":"대구형제막창","category":"음식점","lat":35.836546,"lng":127.1084583,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":197,"name":"대동국수","category":"음식점","lat":35.8366439,"lng":127.1081042,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":198,"name":"더갈비","category":"음식점","lat":35.8343955,"lng":127.1114436,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":199,"name":"독도막회","category":"음식점","lat":35.8357686,"lng":127.1112232,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":200,"name":"등대수산","category":"음식점","lat":35.8358462,"lng":127.1119627,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":201,"name":"로씨니","category":"음식점","lat":35.8342731,"lng":127.1161402,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":202,"name":"마포갈매기","category":"음식점","lat":35.8352065,"lng":127.1111614,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":203,"name":"뭉치네숫불갈비","category":"음식점","lat":35.8347042,"lng":127.1095459,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":204,"name":"민성민물장어","category":"음식점","lat":35.8358345,"lng":127.110989,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":205,"name":"바다나라","category":"음식점","lat":35.8343933,"lng":127.1106926,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":206,"name":"바다사냥","category":"음식점","lat":35.835349,"lng":127.109554,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":207,"name":"보신마을","category":"음식점","lat":35.8351326,"lng":127.1109098,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":208,"name":"복례추어탕","category":"음식점","lat":35.8365333,"lng":127.1119272,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":209,"name":"본죽","category":"음식점","lat":35.8320013,"lng":127.1123381,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":210,"name":"부송국수","category":"음식점","lat":35.8317925,"lng":127.1213691,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":211,"name":"북창동 순두부","category":"음식점","lat":35.8350708,"lng":127.1204228,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":212,"name":"빨간바지","category":"음식점","lat":35.8355773,"lng":127.1099456,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":213,"name":"사방팔방칼국수","category":"음식점","lat":35.8355208,"lng":127.1101373,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":214,"name":"상왕등도횟집","category":"음식점","lat":35.835374,"lng":127.1093273,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":215,"name":"새벽시장","category":"음식점","lat":35.8365982,"lng":127.1082062,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":216,"name":"서신감자탕","category":"음식점","lat":35.835274,"lng":127.1095701,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":217,"name":"선희네한식부페","category":"음식점","lat":35.8344987,"lng":127.1099885,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":218,"name":"세우리","category":"음식점","lat":35.8354044,"lng":127.1103385,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":219,"name":"신포우리만두","category":"음식점","lat":35.8342954,"lng":127.1208434,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":220,"name":"여수돌섬","category":"음식점","lat":35.8364177,"lng":127.1087426,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":221,"name":"영광집","category":"음식점","lat":35.8351304,"lng":127.1114248,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":222,"name":"왕등도회","category":"음식점","lat":35.8355121,"lng":127.1111096,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":223,"name":"우니코 타코","category":"음식점","lat":35.8276564,"lng":127.1152439,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":224,"name":"우도일식","category":"음식점","lat":35.8354519,"lng":127.1119574,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":225,"name":"이바돔감자탕","category":"음식점","lat":35.8345514,"lng":127.119791,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":226,"name":"전주소바","category":"음식점","lat":35.8342411,"lng":127.11106,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":227,"name":"전풍손칼국수","category":"음식점","lat":35.83505,"lng":127.1105263,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":228,"name":"족발타령","category":"음식점","lat":35.8352283,"lng":127.1105289,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":229,"name":"진국청국장","category":"음식점","lat":35.8345437,"lng":127.1113309,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":230,"name":"진미집","category":"음식점","lat":35.8355577,"lng":127.1109058,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":231,"name":"초심","category":"음식점","lat":35.8352805,"lng":127.1109045,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":232,"name":"충만치킨","category":"음식점","lat":35.8357653,"lng":127.1115369,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":233,"name":"큰집 닭강정","category":"음식점","lat":35.8320089,"lng":127.1119787,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":234,"name":"탐탐","category":"음식점","lat":35.8368939,"lng":127.1081927,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":235,"name":"통파이브","category":"음식점","lat":35.8356994,"lng":127.1103974,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":236,"name":"하루방","category":"음식점","lat":35.83485,"lng":127.1119818,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":237,"name":"하참치","category":"음식점","lat":35.8355806,"lng":127.1107717,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":238,"name":"한우야","category":"음식점","lat":35.8354849,"lng":127.1095593,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":239,"name":"해마루감자탕","category":"음식점","lat":35.8318208,"lng":127.1210606,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":240,"name":"해삼집","category":"음식점","lat":35.8349818,"lng":127.1113178,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":241,"name":"현대옥","category":"음식점","lat":35.8346423,"lng":127.1199346,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":242,"name":"황소돌곱창","category":"음식점","lat":35.8342628,"lng":127.1103358,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":243,"name":"Cafe Pascucci","category":"카페","lat":35.8254355,"lng":127.1185826,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":244,"name":"Kona커피","category":"카페","lat":35.8361959,"lng":127.1092629,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":245,"name":"그림과 풍경","category":"카페","lat":35.8353174,"lng":127.1106791,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":246,"name":"노천사랑방","category":"카페","lat":35.8369026,"lng":127.1088915,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":247,"name":"미드나잇 익스프레스","category":"카페","lat":35.8377289,"lng":127.1092254,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":248,"name":"베스킨라빈스","category":"카페","lat":35.8341912,"lng":127.1161321,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":249,"name":"스타벅스","category":"카페","lat":35.8346716,"lng":127.116065,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":250,"name":"아리에스","category":"카페","lat":35.8358698,"lng":127.1108307,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":251,"name":"위드커피","category":"카페","lat":35.8354158,"lng":127.1119427,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":252,"name":"이디야커피","category":"카페","lat":35.8359872,"lng":127.109731,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":253,"name":"커피홀릭","category":"카페","lat":35.8358524,"lng":127.1099992,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":254,"name":"코너925","category":"카페","lat":35.8370961,"lng":127.1100488,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":255,"name":"파스쿠찌","category":"카페","lat":35.8368483,"lng":127.1083564,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":256,"name":"행복한날들","category":"카페","lat":35.8366493,"lng":127.1114422,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":257,"name":"나래유치원","category":"학교","lat":35.8304924,"lng":127.1109316,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":258,"name":"멘토유치원","category":"학교","lat":35.8290319,"lng":127.1182371,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":259,"name":"서신초등학교","category":"학교","lat":35.829777,"lng":127.1247344,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":260,"name":"서천초등학교","category":"학교","lat":35.8322511,"lng":127.1087186,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":261,"name":"송림유치원","category":"학교","lat":35.8262546,"lng":127.1186136,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":262,"name":"여울초등학교","category":"학교","lat":35.8372041,"lng":127.1113723,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":263,"name":"전주서일초등학교","category":"학교","lat":35.836068,"lng":127.1150772,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":264,"name":"전주서중학교","category":"학교","lat":35.8315574,"lng":127.1099262,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":265,"name":"전주한일고등학교","category":"학교","lat":35.8321815,"lng":127.1246035,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":266,"name":"한솔유치원","category":"학교","lat":35.826163,"lng":127.124305,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":267,"name":"해뜰어린이집","category":"학교","lat":35.8357317,"lng":127.1181303,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":268,"name":"혜화유치원","category":"학교","lat":35.8364803,"lng":127.1112109,"rating":null,"reviews":0,"source":"OpenStreetMap"},{"id":269,"name":"원영어학원","category":"학원","lat":35.8349145,"lng":127.1119725,"rating":null,"reviews":0,"source":"OpenStreetMap"}];
+
+    let activeCategory = "전체";
+    let activeQuery = "";
+    let visiblePlaces = [];
+    let selectedPlaceId = null;
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;",
+        '"': "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function popupContent(place) {
+      return `
+        <div class="popup-category">${escapeHtml(place.category)}</div>
+        <div class="popup-name">${escapeHtml(place.name)}</div>
+        <div class="popup-rating">아직 평가 없음</div>
+        <div class="popup-meta">OpenStreetMap 등록 정보 · 리뷰 데이터 없음</div>
+        <button class="popup-action" onclick="showPlaceholder(${place.id})">
+          리뷰 기능 준비 중
+        </button>`;
+    }
+
+    function showPlaceholder(id) {
+      const place = places.find(item => item.id === id);
+      if (!place) return;
+      alert(`${place.name}\n\n리뷰 작성 및 조회 기능은 아직 준비 중이야.`);
+    }
+    window.showPlaceholder = showPlaceholder;
+
+    function filteredPlaces() {
+      return places.filter(place => {
+        const matchesCategory =
+          activeCategory === "전체" || place.category === activeCategory;
+        const matchesQuery =
+          place.name.toLowerCase().includes(activeQuery.toLowerCase());
+        return matchesCategory && matchesQuery;
+      });
+    }
+
+    function popupFor(place) {
+      return new maplibregl.Popup({ offset: 12, closeButton: true })
+        .setHTML(popupContent(place));
+    }
+
+    function showPlacePopup(id) {
+      const place = visiblePlaces.find(item => item.id === id);
+      if (!place) return;
+      new maplibregl.Popup({ offset: 12, closeButton: true })
+        .setLngLat([place.lng, place.lat])
+        .setHTML(popupContent(place))
+        .addTo(map);
+    }
+
+    function updatePlaces() {
+      visiblePlaces = filteredPlaces();
+
+      const features = visiblePlaces.map(place => ({
+        type: "Feature",
+        properties: {
+          id: place.id,
+          name: place.name,
+          category: place.category
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [place.lng, place.lat]
+        }
+      }));
+
+      const source = map.getSource("places");
+      if (source) {
+        source.setData({ type: "FeatureCollection", features });
+      }
+
+      document.getElementById("emptyMessage").style.display =
+        visiblePlaces.length ? "none" : "block";
+
+      return visiblePlaces;
+    }
+
+    function resetMapView() {
+      map.flyTo({ center: [127.1178, 35.8318], zoom: 15 });
+    }
+
+    function applySearch() {
+      activeQuery = document.getElementById("searchInput").value.trim();
+      const results = updatePlaces();
+
+      if (results.length === 1) {
+        map.flyTo({
+          center: [results[0].lng, results[0].lat],
+          zoom: 17
+        });
+        map.once("moveend", () => showPlacePopup(results[0].id));
+      } else if (results.length > 1) {
+        const bounds = new maplibregl.LngLatBounds();
+        results.forEach(place => bounds.extend([place.lng, place.lat]));
+        map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+      } else {
+        resetMapView();
+      }
+    }
+
+    function installPlaceLayers() {
+      map.addSource("places", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterMaxZoom: 16,
+        clusterRadius: 50
+      });
+
+      map.addLayer({
+        id: "place-clusters",
+        type: "circle",
+        source: "places",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": [
+            "step", ["get", "point_count"],
+            "#5B8DEF", 10, "#3769C8", 30, "#234A94"
+          ],
+          "circle-radius": [
+            "step", ["get", "point_count"],
+            14, 10, 18, 30, 22
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#FFFFFF"
+        }
+      });
+
+      map.addLayer({
+        id: "place-cluster-count",
+        type: "symbol",
+        source: "places",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 13
+        },
+        paint: { "text-color": "#FFFFFF" }
+      });
+
+      map.addLayer({
+        id: "place-points",
+        type: "circle",
+        source: "places",
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-radius": 3,
+          "circle-color": "#E05A47",
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#FFFFFF"
+        }
+      });
+
+      map.addLayer({
+        id: "place-names",
+        type: "symbol",
+        source: "places",
+        filter: ["!", ["has", "point_count"]],
+        minzoom: 15,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            15, 9,
+            17, 11,
+            19, 12
+          ],
+          "text-offset": [0, 1.1],
+          "text-anchor": "top",
+          "text-max-width": 9,
+          "text-padding": 3,
+          "symbol-sort-key": ["get", "id"],
+          "text-allow-overlap": false,
+          "text-ignore-placement": false
+        },
+        paint: {
+          "text-color": "#263445",
+          "text-halo-color": "#FFFFFF",
+          "text-halo-width": 1.2
+        }
+      });
+
+      map.on("click", "place-clusters", event => {
+        const feature = map.queryRenderedFeatures(event.point, {
+          layers: ["place-clusters"]
+        })[0];
+        if (!feature) return;
+
+        const clusterId = feature.properties.cluster_id;
+        map.getSource("places").getClusterExpansionZoom(clusterId, (error, zoom) => {
+          if (error) return;
+          map.easeTo({
+            center: feature.geometry.coordinates,
+            zoom
+          });
+        });
+      });
+
+      map.on("click", "place-points", event => {
+        const feature = event.features && event.features[0];
+        if (feature) showPlacePopup(Number(feature.properties.id));
+      });
+
+      map.on("mouseenter", "place-clusters", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "place-clusters", () => {
+        map.getCanvas().style.cursor = "";
+      });
+      map.on("mouseenter", "place-points", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "place-points", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      updatePlaces();
+    }
+
+    document.getElementById("searchInput").addEventListener("input", () => {
+      if (!document.getElementById("searchInput").value.trim()) {
+        activeQuery = "";
+        const results = updatePlaces();
+        if (activeCategory === "전체") {
+          resetMapView();
+        } else if (results.length > 0) {
+          const bounds = new maplibregl.LngLatBounds();
+          results.forEach(place => bounds.extend([place.lng, place.lat]));
+          map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+        } else {
+          resetMapView();
+        }
+      }
+    });
+
+    document.querySelectorAll(".filter").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".filter").forEach(item => {
+          item.classList.toggle("active", item === button);
+        });
+
+        activeCategory = button.dataset.category;
+
+        if (activeCategory === "전체") {
+          document.getElementById("searchInput").value = "";
+          activeQuery = "";
+          updatePlaces();
+          resetMapView();
+        } else {
+          const results = updatePlaces();
+          if (results.length > 0) {
+            const bounds = new maplibregl.LngLatBounds();
+            results.forEach(place => bounds.extend([place.lng, place.lat]));
+            map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+          }
+        }
+      });
+    });    document.getElementById("searchForm").addEventListener("submit", event => {
+      event.preventDefault();
+      applySearch();
+    });
+
+    document.getElementById("searchInput").addEventListener("input", () => {
+      if (!document.getElementById("searchInput").value.trim()) {
+        activeQuery = "";
+        const results = renderPlaces();
+        if (activeCategory === "전체") {
+          resetMapView();
+        } else if (results.length > 0) {
+          const bounds = new maplibregl.LngLatBounds();
+          results.forEach(place => bounds.extend([place.lng, place.lat]));
+          map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+        } else {
+          resetMapView();
+        }
+      }
+    });
+
+    document.querySelectorAll(".filter").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".filter").forEach(item => {
+          item.classList.toggle("active", item === button);
+        });
+
+        activeCategory = button.dataset.category;
+
+        if (activeCategory === "전체") {
+          document.getElementById("searchInput").value = "";
+          activeQuery = "";
+          renderPlaces();
+          resetMapView();
+        } else {
+          const results = renderPlaces();
+          if (results.length > 0) {
+            const bounds = new maplibregl.LngLatBounds();
+            results.forEach(place => bounds.extend([place.lng, place.lat]));
+            map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+          }
+        }
+      });
+    });
+
+    map.on("load", () => {
+      installPlaceLayers();
+    });</script>
+
+<script>
+(() => {
+  const search = document.getElementById("academy-search");
+  const results = document.getElementById("academy-results");
+  const count = document.getElementById("academy-count");
+  const detail = document.getElementById("academy-detail");
+  let academies = [];
+
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[c]));
+  }
+  function listText(a, key) {
+    const v = a[key];
+    return Array.isArray(v) ? v.join(", ") : "";
+  }
+  function won(n) {
+    return Number(n).toLocaleString("ko-KR") + " won";
+  }
+  function render() {
+    const q = search.value.trim().toLocaleLowerCase();
+    const filtered = academies.filter(a => [
+      a.name, a.address, a.type,
+      listText(a, "subjects"), listText(a, "courses")
+    ].join(" ").toLocaleLowerCase().includes(q));
+
+    count.textContent = filtered.length.toLocaleString() +
+      " results / " + academies.length.toLocaleString() + " academies";
+
+    results.innerHTML = filtered.slice(0, 150).map((a, i) => `
+      <button class="academy-row" type="button" data-index="${academies.indexOf(a)}">
+        <strong>${esc(a.name)}</strong>
+        <small>${esc(a.type)} ? ${esc(a.address)}</small>
+      </button>`).join("");
+
+    if (!filtered.length) {
+      results.innerHTML = '<p style="padding:12px 16px">No matching academies.</p>';
+    } else if (filtered.length > 150) {
+      results.insertAdjacentHTML("beforeend",
+        '<p style="padding:8px 16px;color:#697586">Showing first 150 results. Refine your search.</p>');
+    }
+  }
+
+  results.addEventListener("click", event => {
+    const button = event.target.closest("button[data-index]");
+    if (!button) return;
+    const a = academies[Number(button.dataset.index)];
+    if (!a) return;
+
+    const academyMap = window.academyMap;
+    const lng = Number(a.longitude);
+    const lat = Number(a.latitude);
+
+    if (academyMap && Number.isFinite(lng) && Number.isFinite(lat)) {
+      academyMap.flyTo({
+        center: [lng, lat],
+        zoom: 17,
+        essential: true
+      });
+    }
+
+    const subjects = listText(a, "subjects");
+    const courses = listText(a, "courses");
+    const fees = Array.isArray(a.fees) ? a.fees : [];
+    const status = Array.isArray(a.status) ? a.status : [];
+
+    detail.style.display = "block";
+    detail.innerHTML = `
+      <button id="academy-close" type="button">Close</button>
+      <h3>${esc(a.name)}</h3>
+      <p><b>Type:</b> ${esc(a.type)}</p>
+      <p><b>Address:</b> ${esc(a.address)}</p>
+      <p><b>Subjects:</b> ${esc(subjects || "Not provided")}</p>
+      <p><b>Courses:</b> ${esc(courses || "Not provided")}</p>
+      <p><b>Fees:</b> ${fees.length ? esc(fees.map(won).join(", ")) : "Not provided"}</p>
+      <p><b>Status:</b> ${esc(status.join(", ") || "Not provided")}</p>
+      <p><b>Rating:</b> No reviews yet</p>
+      <p><b>Reviews:</b> 0</p>
+      <p class="muted">Coordinates: ${Number.isFinite(Number(a.longitude)) && Number.isFinite(Number(a.latitude)) ? "Available" : "Unavailable"}</p>`;
+    document.getElementById("academy-close").addEventListener("click", () => {
+      detail.style.display = "none";
+    });
+  });
+
+  search.addEventListener("input", render);
+
+  fetch("./data/jeonju-academies-geocoded.json")
+    .then(response => {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    })
+    .then(data => {
+      academies = data;
+      render();
+    })
+    .catch(error => {
+      count.textContent = "Could not load academy data";
+      results.innerHTML =
+        '<p style="padding:12px 16px">Start the local web server in the project folder, then reopen this page. Error: ' +
+        esc(error.message) + '</p>';
+    });
+})();
+</script>
+
+</body>
+</html>
+
+
