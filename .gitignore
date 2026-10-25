@@ -1,0 +1,15 @@
+﻿# Large map data and local datasets
+data/
+__pycache__/
+*.pyc
+
+# Backup and experimental HTML versions
+index*.backup.html
+index*.before-*.html
+index*.pre-*.html
+index.maplibre-*.html
+index.backup.html
+
+# Local environment
+.env
+.env.*
